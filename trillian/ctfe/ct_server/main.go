@@ -18,6 +18,8 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -94,6 +96,22 @@ func main() {
 		res = util.FixedBackendResolver{}
 	}
 	bal := grpc.RoundRobin(res)
+
+	// If rpcBackendFlag points to a SRV record, resolve it now.
+	// Assume it's a SRV if there's no port specified.
+	if strings.Index(*rpcBackendFlag, ":") == -1 {
+		// Expected format is _service._proto.the.name.can.be.long
+		parts := strings.SplitN(*rpcBackendFlag, ".", 3)
+		if len(parts) != 3 {
+			glog.Exitf("Invalid SRV backend flag: %v", *rpcBackendFlag)
+		}
+		_, srvRecords, err := net.LookupSRV(parts[0], parts[1], parts[3])
+		if err != nil {
+			glog.Exitf("Failed SRV lookup for backend: %v", err)
+		}
+		*rpcBackendFlag = fmt.Sprintf("%s:%d", srvRecords[0].Target, srvRecords[0].Port)
+	}
+
 	conn, err := grpc.Dial(*rpcBackendFlag, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithBalancer(bal))
 	if err != nil {
 		glog.Exitf("Could not connect to rpc server: %v", err)
