@@ -105,7 +105,7 @@ func main() {
 		if len(parts) != 3 {
 			glog.Exitf("Invalid SRV backend flag: %v", *rpcBackendFlag)
 		}
-		_, srvRecords, err := net.LookupSRV(parts[0], parts[1], parts[3])
+		_, srvRecords, err := net.LookupSRV(parts[0], parts[1], parts[2])
 		if err != nil {
 			glog.Exitf("Failed SRV lookup for backend: %v", err)
 		}
